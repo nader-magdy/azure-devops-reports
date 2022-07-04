@@ -1,14 +1,16 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom, map, Observable } from 'rxjs';
-import { azureDevOpsConfig } from 'src/configs/azure-devops-config';
 import { ICapacity } from 'src/models/capacity.model';
 import { IDaysOff } from 'src/models/days-off.model';
 import { IIteration } from 'src/models/iteration.model';
+import { ConfigService } from './config.service';
 
 @Injectable()
 export class AzureDevopsService {
-    constructor(private readonly httpService: HttpService) { }
+
+    constructor(private readonly httpService: HttpService, 
+        private readonly configService : ConfigService) { }
 
     async getCapacity(filterPath: string = "") :Promise<ICapacity[]> {
         const currentIteration = await this.getCurrentIteration(filterPath);
@@ -48,11 +50,11 @@ export class AzureDevopsService {
     getIterations(filterPath: string = ""): Observable<IIteration[]> {
         return this.httpService.get(this.buildBasicUrl("teamsettings/iterations"))
             .pipe(
-                map(res => res.data.value.filter(x => x.path.indexOf(`${azureDevOpsConfig.team}\\${filterPath}`) > -1)
+                map(res => res.data.value.filter(x => x.path.indexOf(`${this.configService.azureDevOpsConfigs.team}\\${filterPath}`) > -1)
                     .map(iteration => (<IIteration>{
                         id: iteration.id,
                         name: iteration.name,
-                        path: iteration.path.replace(azureDevOpsConfig.team, ""),
+                        path: iteration.path.replace(this.configService.azureDevOpsConfigs.team, ""),
                         url: iteration.url,
                         ...iteration.attributes
                     }))));
@@ -69,7 +71,7 @@ export class AzureDevopsService {
         return iterations.filter(i => i.timeFrame == 'current')[0];
     }
     private buildBasicUrl(endpoint: string): string {
-        return `https://${azureDevOpsConfig.token}@projects.integrant.com/${azureDevOpsConfig.organization}/${azureDevOpsConfig.project}/${azureDevOpsConfig.team}/_apis/work/${endpoint}`;
+        return `https://${this.configService.azureDevOpsConfigs.token}@projects.integrant.com/${this.configService.azureDevOpsConfigs.organization}/${this.configService.azureDevOpsConfigs.project}/${this.configService.azureDevOpsConfigs.team}/_apis/work/${endpoint}`;
     }
 
     private getBusinessDatesCount(startDate: Date, endDate: Date) {
