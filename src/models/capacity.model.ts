@@ -10,8 +10,10 @@ export interface ICapacity extends IIteration {
     capacityPerDay: number;
     name: string;
     daysOff: number;
+    pastDaysOff : number;
     workingHours: number;
     workingDays: number;
+    pastWorkingDays : number;
     iterationName : string;
     iterationPath : string;
     iterationUrl : string;

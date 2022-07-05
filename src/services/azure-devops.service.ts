@@ -22,17 +22,27 @@ export class AzureDevopsService {
     private async getCapacityPerIteration(iteration: IIteration, filter : IAzureDevOpsConfig = null): Promise<ICapacity[]> {
         const teamDaysOff = await this.getTeamDaysOff(iteration.id, filter);
         let teamDaysOffCount = 0;
+        let pastTeamDaysOffCount = 0;
+        const today = new Date();
         teamDaysOff.forEach(daysOff => {
             teamDaysOffCount += this.getBusinessDatesCount(daysOff.start, daysOff.end);
+            let endDate = new Date(daysOff.end).getTime() < today.getTime() ? daysOff.end : today;
+            pastTeamDaysOffCount += this.getBusinessDatesCount(daysOff.start, endDate);
         })
+        const workingDays = this.getBusinessDatesCount(iteration.startDate, iteration.finishDate);
+        let previousDate = new Date();
+        previousDate.setDate(new Date().getDate() - 1);
+        const pastWorkingDays = this.getBusinessDatesCount(iteration.startDate, previousDate);
         return lastValueFrom(this.httpService.get(this.buildBasicUrl(`teamsettings/iterations/${iteration.id}/capacities`, filter))
             .pipe(map(res => res.data.value.map(c => {
                 let obj = <ICapacity>{
                     ...c.teamMember,
                     ...c.activities[0],
                     daysOff: teamDaysOffCount,
+                    pastDaysOff : pastTeamDaysOffCount,
                     workingHours: 8,
-                    workingDays: this.getBusinessDatesCount(iteration.startDate, iteration.finishDate),
+                    workingDays: workingDays,
+                    pastWorkingDays: pastWorkingDays,
                     iterationName: iteration.name,
                     iterationPath: iteration.path,
                     iterationUrl: iteration.url,
@@ -42,6 +52,8 @@ export class AzureDevopsService {
                 };
                 c.daysOff.forEach(dayOff => {
                     obj.daysOff += this.getBusinessDatesCount(dayOff.start, dayOff.end);
+                    let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : today;
+                    obj.pastDaysOff += this.getBusinessDatesCount(dayOff.start, endDate);
                 });
 
                 return obj;
