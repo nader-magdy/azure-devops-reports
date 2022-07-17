@@ -26,13 +26,15 @@ export class AzureDevopsService {
         const today = new Date();
         teamDaysOff.forEach(daysOff => {
             teamDaysOffCount += this.getBusinessDatesCount(daysOff.start, daysOff.end);
-            let endDate = new Date(daysOff.end).getTime() < today.getTime() ? daysOff.end : today;
+            const endDate = new Date(daysOff.end).getTime() < today.getTime() ? daysOff.end : today;
             pastTeamDaysOffCount += this.getBusinessDatesCount(daysOff.start, endDate);
         })
         const workingDays = this.getBusinessDatesCount(iteration.startDate, iteration.finishDate);
         let previousDate = new Date();
         previousDate.setDate(new Date().getDate() - 1);
-        const pastWorkingDays = this.getBusinessDatesCount(iteration.startDate, previousDate);
+        
+        const endDate = new Date(iteration.finishDate).getTime() < previousDate.getTime() ? iteration.finishDate : previousDate;
+        const pastWorkingDays = this.getBusinessDatesCount(iteration.startDate, endDate);
         return lastValueFrom(this.httpService.get(this.buildBasicUrl(`teamsettings/iterations/${iteration.id}/capacities`, filter))
             .pipe(map(res => res.data.value.map(c => {
                 let obj = <ICapacity>{
@@ -40,7 +42,7 @@ export class AzureDevopsService {
                     ...c.activities[0],
                     daysOff: teamDaysOffCount,
                     pastDaysOff : pastTeamDaysOffCount,
-                    workingHours: 8,
+                    workingHours: c.activities[0].capacityPerDay > 4 ? 8 : 4,
                     workingDays: workingDays,
                     pastWorkingDays: pastWorkingDays,
                     iterationName: iteration.name,
@@ -83,7 +85,10 @@ export class AzureDevopsService {
     private async getCurrentIteration(filterPath: string = "", filter : IAzureDevOpsConfig = null): Promise<IIteration> {
         let iterations$ = this.getIterations(filterPath, filter);
         let iterations = await lastValueFrom(iterations$);
-        return iterations.filter(i => i.timeFrame == 'current')[0];
+        console.log(iterations);
+        let currentIterations = iterations.filter(i => i.timeFrame == 'current');
+        if(currentIterations && currentIterations.length) return currentIterations[0];
+        return iterations[0];
     }
     private buildBasicUrl(endpoint: string, filter : IAzureDevOpsConfig = null): string {
         const project = filter?.project || this.configService.azureDevOpsConfigs.project;
