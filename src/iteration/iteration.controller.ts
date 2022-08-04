@@ -7,13 +7,13 @@ export class IterationController {
   constructor(private readonly azureDevOpsService: AzureDevopsService) { }
 
   @Get('capacity/:project/:team')
-  async getIterations(@Param('project') project: string, @Param('team') team: string,@Query("f") filterPath : string = "") {
+  async getCapacity(@Param('project') project: string, @Param('team') team: string,@Query("f") filterPath : string = "") {
     return this.azureDevOpsService.getCapacity(filterPath, <IAzureDevOpsConfig>{ project, team });
   }
 
   //teamdaysoff
-  @Get("team-days-off")
-  async getTeamDaysOff() {
-    return this.azureDevOpsService.getTeamDaysOff();
+  @Get('all/:project/:team')
+  async getIterations(@Param('project') project: string, @Param('team') team: string,@Query("f") filterPath : string = "") {
+    return this.azureDevOpsService.getIterations(filterPath, <IAzureDevOpsConfig>{ project, team });
   }
 }

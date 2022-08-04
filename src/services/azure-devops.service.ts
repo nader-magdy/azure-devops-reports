@@ -85,7 +85,6 @@ export class AzureDevopsService {
     private async getCurrentIteration(filterPath: string = "", filter : IAzureDevOpsConfig = null): Promise<IIteration> {
         let iterations$ = this.getIterations(filterPath, filter);
         let iterations = await lastValueFrom(iterations$);
-        console.log(iterations);
         let currentIterations = iterations.filter(i => i.timeFrame == 'current');
         if(currentIterations && currentIterations.length) return currentIterations[0];
         return iterations[0];
