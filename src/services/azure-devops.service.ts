@@ -71,7 +71,7 @@ export class AzureDevopsService {
                     .map(iteration => (<IIteration>{
                         id: iteration.id,
                         name: iteration.name,
-                        path: iteration.path.replace(this.configService.azureDevOpsConfigs.team, ""),
+                        path: iteration.path.replace(team, ""),
                         url: iteration.url,
                         ...iteration.attributes
                     }))));
