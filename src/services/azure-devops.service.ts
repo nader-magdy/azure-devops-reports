@@ -58,8 +58,6 @@ export class AzureDevopsService {
                     obj.daysOff += this.getBusinessDatesCount(dayOff.start, dayOff.end);
                     if (new Date(dayOff.start).getTime() < today.getTime()) {
                         // if the day off start before today 
-                        console.log(dayOff);
-                        console.log("--------------->", new Date(dayOff.end).getTime() < today.getTime());
                         let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : new Date(todayMomnet.subtract(1, 'days').format());
                         obj.pastDaysOff += this.getBusinessDatesCount(dayOff.start, endDate);
                     }
