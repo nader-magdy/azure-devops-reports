@@ -13,13 +13,13 @@ export class AzureDevopsService {
     constructor(private readonly httpService: HttpService,
         private readonly configService: ConfigService) { }
 
-    async getCapacity(filterPath: string = "", filter : IAzureDevOpsConfig = null): Promise<ICapacity[]> {
+    async getCapacity(filterPath: string = "", filter: IAzureDevOpsConfig = null): Promise<ICapacity[]> {
         const currentIteration = await this.getCurrentIteration(filterPath, filter);
         return this.getCapacityPerIteration(currentIteration, filter);
 
     }
 
-    private async getCapacityPerIteration(iteration: IIteration, filter : IAzureDevOpsConfig = null): Promise<ICapacity[]> {
+    private async getCapacityPerIteration(iteration: IIteration, filter: IAzureDevOpsConfig = null): Promise<ICapacity[]> {
         const teamDaysOff = await this.getTeamDaysOff(iteration.id, filter);
         let teamDaysOffCount = 0;
         let pastTeamDaysOffCount = 0;
@@ -32,7 +32,7 @@ export class AzureDevopsService {
         const workingDays = this.getBusinessDatesCount(iteration.startDate, iteration.finishDate);
         let previousDate = new Date();
         previousDate.setDate(new Date().getDate() - 1);
-        
+
         const endDate = new Date(iteration.finishDate).getTime() < previousDate.getTime() ? iteration.finishDate : previousDate;
         const pastWorkingDays = this.getBusinessDatesCount(iteration.startDate, endDate);
         return lastValueFrom(this.httpService.get(this.buildBasicUrl(`teamsettings/iterations/${iteration.id}/capacities`, filter))
@@ -41,7 +41,7 @@ export class AzureDevopsService {
                     ...c.teamMember,
                     ...c.activities[0],
                     daysOff: teamDaysOffCount,
-                    pastDaysOff : pastTeamDaysOffCount,
+                    pastDaysOff: pastTeamDaysOffCount,
                     workingHours: c.activities[0].capacityPerDay > 4 ? 8 : 4,
                     workingDays: workingDays,
                     pastWorkingDays: pastWorkingDays,
@@ -54,42 +54,45 @@ export class AzureDevopsService {
                 };
                 c.daysOff.forEach(dayOff => {
                     obj.daysOff += this.getBusinessDatesCount(dayOff.start, dayOff.end);
-                    let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : today;
-                    obj.pastDaysOff += this.getBusinessDatesCount(dayOff.start, endDate);
+                    if (new Date(dayOff.start).getTime() < today.getTime()) {
+                        // if the day off start before today 
+                        let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : today;
+                        obj.pastDaysOff += this.getBusinessDatesCount(dayOff.start, endDate);
+                    }
                 });
 
                 return obj;
             }))));
     }
 
-    getIterations(filterPath: string = "", filter : IAzureDevOpsConfig = null): Observable<IIteration[]> {
+    getIterations(filterPath: string = "", filter: IAzureDevOpsConfig = null): Observable<IIteration[]> {
         const team = filter?.team || this.configService.azureDevOpsConfigs.team;
         return this.httpService.get(this.buildBasicUrl("teamsettings/iterations", filter))
             .pipe(
-                map(res => 
+                map(res =>
                     res.data.value.filter(x => x.path.indexOf(`${team}\\${filterPath}`) > -1)
-                    .map(iteration => (<IIteration>{
-                        id: iteration.id,
-                        name: iteration.name,
-                        path: iteration.path.replace(team, ""),
-                        url: iteration.url,
-                        ...iteration.attributes
-                    }))));
+                        .map(iteration => (<IIteration>{
+                            id: iteration.id,
+                            name: iteration.name,
+                            path: iteration.path.replace(team, ""),
+                            url: iteration.url,
+                            ...iteration.attributes
+                        }))));
     }
 
-    async getTeamDaysOff(iterationId: string = null, filter : IAzureDevOpsConfig = null): Promise<IDaysOff[]> {
+    async getTeamDaysOff(iterationId: string = null, filter: IAzureDevOpsConfig = null): Promise<IDaysOff[]> {
         iterationId = iterationId ?? (await this.getCurrentIteration()).id;
         return lastValueFrom(this.httpService.get(this.buildBasicUrl(`teamsettings/iterations/${iterationId}/teamdaysoff`, filter))
             .pipe(map(res => <IDaysOff[]>res.data.daysOff)));
     }
-    private async getCurrentIteration(filterPath: string = "", filter : IAzureDevOpsConfig = null): Promise<IIteration> {
+    private async getCurrentIteration(filterPath: string = "", filter: IAzureDevOpsConfig = null): Promise<IIteration> {
         let iterations$ = this.getIterations(filterPath, filter);
         let iterations = await lastValueFrom(iterations$);
         let currentIterations = iterations.filter(i => i.timeFrame == 'current');
-        if(currentIterations && currentIterations.length) return currentIterations[0];
+        if (currentIterations && currentIterations.length) return currentIterations[0];
         return iterations[0];
     }
-    private buildBasicUrl(endpoint: string, filter : IAzureDevOpsConfig = null): string {
+    private buildBasicUrl(endpoint: string, filter: IAzureDevOpsConfig = null): string {
         const project = filter?.project || this.configService.azureDevOpsConfigs.project;
         const team = filter?.team || this.configService.azureDevOpsConfigs.team;
         return `https://${this.configService.azureDevOpsConfigs.token}@projects.integrant.com/${this.configService.azureDevOpsConfigs.organization}/${project}/${team}/_apis/work/${endpoint}`;
