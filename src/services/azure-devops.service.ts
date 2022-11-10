@@ -6,6 +6,7 @@ import { ICapacity } from 'src/models/capacity.model';
 import { IDaysOff } from 'src/models/days-off.model';
 import { IIteration } from 'src/models/iteration.model';
 import { ConfigService } from './config.service';
+import * as moment from 'moment'
 
 @Injectable()
 export class AzureDevopsService {
@@ -23,7 +24,8 @@ export class AzureDevopsService {
         const teamDaysOff = await this.getTeamDaysOff(iteration.id, filter);
         let teamDaysOffCount = 0;
         let pastTeamDaysOffCount = 0;
-        const today = new Date();
+        const todayMomnet = moment.utc().startOf('day');
+        const today = new Date(todayMomnet.format());
         teamDaysOff.forEach(daysOff => {
             teamDaysOffCount += this.getBusinessDatesCount(daysOff.start, daysOff.end);
             const endDate = new Date(daysOff.end).getTime() < today.getTime() ? daysOff.end : today;
@@ -56,7 +58,9 @@ export class AzureDevopsService {
                     obj.daysOff += this.getBusinessDatesCount(dayOff.start, dayOff.end);
                     if (new Date(dayOff.start).getTime() < today.getTime()) {
                         // if the day off start before today 
-                        let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : today;
+                        console.log(dayOff);
+                        console.log("--------------->", new Date(dayOff.end).getTime() < today.getTime());
+                        let endDate = new Date(dayOff.end).getTime() < today.getTime() ? dayOff.end : new Date(todayMomnet.subtract(1, 'days').format());
                         obj.pastDaysOff += this.getBusinessDatesCount(dayOff.start, endDate);
                     }
                 });
